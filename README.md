@@ -14,3 +14,11 @@
 ```bash
     python create_tf_record.py
 ```
+3. create random mask
+```bash
+    python create_random_mask.py \
+        -i 'path to input directory' \ #(<input dir>/*.json)
+        -mask_shape_w 1920 \ # width of mask
+        -mask_shape_h 1080 \ # height of mask
+        -o 'path to output directory'
+```
