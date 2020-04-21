@@ -9,6 +9,7 @@ import base64
 from PIL import Image
 import numpy as np
 import torch
+import torch.utils.data as data
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import matplotlib.pyplot as plt
@@ -23,11 +24,19 @@ def b64utf82ndarr(b_string):
 
 
 class Normalize(object):
+    def __inint__(self, mean=0.5,std=0.5):
+        self.mean=mean
+        self.std=std
+
     def __call__(self, sample):
         sample_img, mask_img = sample['image'], sample['mask']
-        sample_img = sample_img/255.
-        if mask_img is not None:
-            mask_img = mask_img/255.
+        sample_img = sample_img / 255.
+        #sample_img = (sample_img-self.mean)/self.std
+
+        # mask already has 0, 1 value
+        #if mask_img is not None:
+        #    mask_img = mask_img/255.
+
         return {'image': sample_img, 'mask': mask_img}
 
 
@@ -39,13 +48,11 @@ class ToTensor(object):
 
         # (F, H, W, C) -> (F, C, H, W)
         sample_img = np.transpose(sample_img, (0, 3, 1, 2))
-        if mask_img is not None:
-            mask_img = np.transpose(mask_img, (0, 3, 1, 2))
-            return {'image': torch.from_numpy(sample_img), 'mask': torch.from_numpy(mask_img)}
-        return {'image': torch.from_numpy(sample_img), 'mask': None}
+        mask_img = np.transpose(mask_img, (0, 3, 1, 2))
 
+        return {'image': torch.from_numpy(sample_img), 'mask': torch.from_numpy(mask_img)}
 
-class DataLoader(Dataset):
+class PanoramaDataset(data.Dataset):
     def __init__(self, in_dir, transform=None):
         self.inp_paths = glob.glob(os.path.join(in_dir, "*.json"))
         self.face_order = ['f', 'r', 'b', 'l', 't', 'd']
@@ -89,10 +96,12 @@ class DataLoader(Dataset):
         if in_json['mask_flag']:
             sample = {'image': sample_img, 'mask': mask_img}
         else:
-            sample = {'image': sample_img, 'mask': None}
+            mask_img = np.zeros(sample_img.shape) # make mask's value all zero
+            sample = {'image': sample_img, 'mask': mask_img}
 
         if self.transform:
             sample = self.transform(sample)
+
         return sample
 
 def show_imgs(image, fig):
@@ -104,8 +113,8 @@ def show_imgs(image, fig):
     
 
 if __name__ == "__main__":
-    transformed_dataset = DataLoader(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/data/out_temp', transform=transforms.Compose([Normalize(), ToTensor()]))
-    #transformed_dataset = DataLoader(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/data/out_temp')
+    transformed_dataset = PanoramaDataset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/data/out_temp', transform=transforms.Compose([Normalize(), ToTensor()]))
+    #transformed_dataset = PanoramaDataset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/data/out_temp')
     for i in range(len(transformed_dataset)):
         sample = transformed_dataset[i]
         
