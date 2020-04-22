@@ -1,7 +1,7 @@
 """
 Random mask generator
 
-https://github.com/MathiasGruber/PConv-Keras.git
+This code is based on https://github.com/MathiasGruber/PConv-Keras.git
 """
 import os
 import sys
@@ -67,11 +67,15 @@ if __name__ == "__main__":
     parser.add_argument("-o", default="./mask")
     args = parser.parse_args()
 
-    inp_paths = glob.glob(os.path.join(args.i, "*.json"))
+    inp_paths = glob.glob(os.path.join(args.i, "*.png"))
     mask_shape = (args.mask_shape_w, args.mask_shape_h)
     out_dir = args.o
 
     if not os.path.isdir(out_dir):
         os.mkdir(out_dir)
+    i = 0
     for inp_path in inp_paths:
+        if i % 100 ==0:
+            print(i,"/",len(inp_paths))
         make_save_random_mask(inp_path=inp_path, mask_shape=mask_shape,output_dir=out_dir)
+        i = i + 1
