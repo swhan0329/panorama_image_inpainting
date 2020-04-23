@@ -22,37 +22,7 @@ def b64utf82ndarr(b_string):
     inp_np = np.asarray(img)
     return inp_np
 
-
-class Normalize(object):
-    def __inint__(self, mean=0.5,std=0.5):
-        self.mean=mean
-        self.std=std
-
-    def __call__(self, sample):
-        sample_img, mask_img = sample['image'], sample['mask']
-        sample_img = sample_img / 255.
-        #sample_img = (sample_img-self.mean)/self.std
-
-        # mask already has 0, 1 value
-        #if mask_img is not None:
-        #    mask_img = mask_img/255.
-
-        return {'image': sample_img, 'mask': mask_img}
-
-
-class ToTensor(object):
-    """Convert ndarrays in sample to Tensors."""
-
-    def __call__(self, sample):
-        sample_img, mask_img = sample['image'], sample['mask']
-
-        # (F, H, W, C) -> (F, C, H, W)
-        sample_img = np.transpose(sample_img, (0, 3, 1, 2))
-        mask_img = np.transpose(mask_img, (0, 3, 1, 2))
-
-        return {'image': torch.from_numpy(sample_img), 'mask': torch.from_numpy(mask_img)}
-
-class PanoramaDataset(data.Dataset):
+class PanoramaDadaset(data.Dataset):
     def __init__(self, in_dir, transform=None):
         self.inp_paths = glob.glob(os.path.join(in_dir, "*.json"))
         self.face_order = ['f', 'r', 'b', 'l', 't', 'd']
@@ -103,6 +73,36 @@ class PanoramaDataset(data.Dataset):
             sample = self.transform(sample)
 
         return sample
+    
+class Normalize(object):
+    def __inint__(self, mean=0.5,std=0.5):
+        self.mean=mean
+        self.std=std
+
+    def __call__(self, sample):
+        sample_img, mask_img = sample['image'], sample['mask']
+        sample_img = sample_img / 255.
+        #sample_img = (sample_img-self.mean)/self.std
+
+        # mask already has 0, 1 value
+        #if mask_img is not None:
+        #    mask_img = mask_img/255.
+
+        return {'image': sample_img, 'mask': mask_img}
+
+
+class ToTensor(object):
+    """Convert ndarrays in sample to Tensors."""
+
+    def __call__(self, sample):
+        sample_img, mask_img = sample['image'], sample['mask']
+
+        # (F, H, W, C) -> (F, C, H, W)
+        sample_img = np.transpose(sample_img, (0, 3, 1, 2))
+        mask_img = np.transpose(mask_img, (0, 3, 1, 2))
+
+        return {'image': torch.from_numpy(sample_img), 'mask': torch.from_numpy(mask_img)}
+
 
 def show_imgs(image, fig):
     for idx in range(image.shape[0]):
@@ -113,8 +113,8 @@ def show_imgs(image, fig):
     
 
 if __name__ == "__main__":
-    transformed_dataset = PanoramaDataset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/data/out_temp', transform=transforms.Compose([Normalize(), ToTensor()]))
-    #transformed_dataset = PanoramaDataset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/data/out_temp')
+    transformed_dataset = PanoramaDadaset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/data/out_temp', transform=transforms.Compose([Normalize(), ToTensor()]))
+    #transformed_dataset = PanoramaDadaset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/data/out_temp')
     for i in range(len(transformed_dataset)):
         sample = transformed_dataset[i]
         
