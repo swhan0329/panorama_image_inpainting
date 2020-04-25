@@ -17,7 +17,7 @@ from create_data import b64utf82ndarr
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-i", required="dddd", type=str, help="\
+    parser.add_argument("-i", required="True", type=str, help="\
         path to input directory. (<input dir>/*.json)")
     parser.add_argument("-o", default="output_dir")
     args = parser.parse_args()
@@ -33,11 +33,15 @@ if __name__ == "__main__":
         base_name, _ = os.path.splitext(os.path.basename(inp_path))
         with open(inp_path, "r") as f:
             in_json = json.load(f)
-            for k, v in in_json['imgs'].items():
+            for k, v in in_json['pano'].items():
+                print(k)
+                img_dnarr = b64utf82ndarr(v[0])
+                img = Image.fromarray(img_dnarr)
+                img.save(os.path.join(out_dir, "{}_{}.png".format(base_name,k)))
+            for k, v in in_json['cube'].items():
                 img_dnarr = b64utf82ndarr(v[0])
                 img = Image.fromarray(img_dnarr)
                 img.save(os.path.join(out_dir, "{}_{}.png".format(base_name, k)))
-    
 
 
 
