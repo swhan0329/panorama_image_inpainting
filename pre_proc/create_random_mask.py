@@ -75,7 +75,7 @@ if __name__ == "__main__":
         os.mkdir(out_dir)
     i = 0
     for inp_path in inp_paths:
-        if i % 100 ==0:
+        if i % 1000 ==0:
             print(i,"/",len(inp_paths))
         make_save_random_mask(inp_path=inp_path, mask_shape=mask_shape,output_dir=out_dir)
         i = i + 1

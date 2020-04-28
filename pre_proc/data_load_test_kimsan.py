@@ -33,11 +33,7 @@ if __name__ == "__main__":
         base_name, _ = os.path.splitext(os.path.basename(inp_path))
         with open(inp_path, "r") as f:
             in_json = json.load(f)
-            for k, v in in_json['pano'].items():
-                img_dnarr = b64utf82ndarr(v[0])
-                img = Image.fromarray(img_dnarr)
-                img.save(os.path.join(out_dir, "{}_{}.png".format(base_name,k)))
-            for k, v in in_json['cube'].items():
+            for k, v in in_json['imgs'].items():
                 img_dnarr = b64utf82ndarr(v[0])
                 img = Image.fromarray(img_dnarr)
                 img.save(os.path.join(out_dir, "{}_{}.png".format(base_name, k)))
