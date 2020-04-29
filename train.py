@@ -1,16 +1,11 @@
-import os
-import numpy as np
-import argparse
-
-import torch
-import torch.nn as nn
 from torch.nn import DataParallel
-from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from model.PInet import *
 from data.dataset import *
 from utils.util import *
+from utils.cube_to_equi import c2e
+from model.losses import *
 
 import matplotlib.pyplot as plt
 
@@ -37,7 +32,6 @@ def train(args):
     nker = args.nker
 
     network = args.network
-    learning_type = args.learning_type
 
     if torch.cuda.is_available() == False:
         raise Exception('At least one gpu must be available.')
@@ -52,7 +46,6 @@ def train(args):
     print("number of epoch: %d" % num_epoch)
 
     print("network: %s" % network)
-    print("learning type: %s" % learning_type)
 
     print("data dir: %s" % data_dir)
     print("ckpt dir: %s" % ckpt_dir)
@@ -93,9 +86,7 @@ def train(args):
 
         init_weights(netG, init_type='normal', init_gain=0.02)
         init_weights(netD, init_type='normal', init_gain=0.02)
-    
 
-        
     ## 손실함수 정의하기
     fn_loss = nn.BCELoss().to(gpu)
 
@@ -104,9 +95,8 @@ def train(args):
     optimD = torch.optim.Adam(netD.parameters(), lr=lr, betas=(0.5, 0.999))
 
     ## 그밖에 부수적인 functions 설정하기
-    fn_tonumpy = lambda x: x.to('cpu').detach().numpy().transpose(0, 2, 3, 1)
+    fn_tonumpy = lambda x: x.to('cpu').detach().numpy().transpose(0, 1, 3, 4, 2) #0,2,3,1
     fn_denorm = lambda x, mean, std: (x * std) + mean
-    fn_class = lambda x: 1.0 * (x > 0.5)
 
     cmap = None
 
@@ -135,12 +125,20 @@ def train(args):
 
             for batch, sample in enumerate(loader_train, 1):
                 # forward pass
-                cube = sample['cube'].to(gpu)
-                cube_mask = sample['cube_mask'].to(gpu)
-                pano = sample['pano'].to(gpu)
-                pano_mask = sample['pano_mask'].to(gpu)
+                cube = sample['cube'].to(gpu, dtype=torch.float32) # B, F, 3, H, W
+                cube_mask = sample['cube_mask'].to(gpu, dtype=torch.float32) # B, F, 1, H, W
+                pano = sample['pano'].to(gpu, dtype=torch.float32) # B, 1, 3, H, W
+                pano_mask = sample['pano_mask'].to(gpu, dtype=torch.float32) # B, 1, 1, H, W
 
-                x_cube_mask = cube - cube * cube_mask
+                for f in range(6):
+                    x_cube_mask_temp = cube[:, f, :, :, :] - cube[:, f, :, :, :] * cube_mask[:, f, :, :, :]
+                    x_cube_mask_temp = x_cube_mask_temp.view(x_cube_mask_temp.shape[0], 1, x_cube_mask_temp.shape[1],
+                                                        x_cube_mask_temp.shape[2], x_cube_mask_temp.shape[3])
+                    if f == 0:
+                        x_cube_mask = x_cube_mask_temp
+                    else:
+                        x_cube_mask = torch.cat((x_cube_mask,x_cube_mask_temp),dim=1)
+
                 x_pano_mask = pano - pano * pano_mask
 
                 for f in range(6):
@@ -153,11 +151,11 @@ def train(args):
                 input_pano = torch.cat((x_pano_mask, pano_mask), dim=2)
                 input_pano = torch.squeeze(input_pano,dim=1)
 
-                input_cube = input_cube.to(dtype=torch.float)
-                input_pano = input_pano.to(dtype=torch.float)
+                input_cube = input_cube.to(dtype=torch.float32)
+                input_pano = input_pano.to(dtype=torch.float32)
 
                 _,_,_,output = netG(input_pano,input_cube)
-                
+
                 # backward netD
                 set_requires_grad(netD, True)
                 optimD.zero_grad()
@@ -169,7 +167,7 @@ def train(args):
                     else:
                         label_cube = torch.cat((label_cube,label_cube_temp),dim=1)
 
-                label_cube = label_cube.to(dtype=torch.float)
+                label_cube = label_cube.to(dtype=torch.float32)
 
                 pred_real = netD(label_cube)
                 pred_fake = netD(output.detach())
@@ -187,7 +185,8 @@ def train(args):
 
                 pred_fake = netD(output)
 
-                loss_G = fn_loss(pred_fake, torch.ones_like(pred_fake))
+                output = torch.reshape(output, (output.shape[0], 6, nch, output.shape[2], output.shape[3]))
+                loss_G = (fn_loss(pred_fake, torch.ones_like(pred_fake)) + completion_network_loss(cube, output, cube_mask))/2.
 
                 loss_G.backward()
                 optimG.step()
@@ -199,28 +198,58 @@ def train(args):
 
                 print("TRAIN: EPOCH %04d / %04d | BATCH %04d / %04d | "
                       "GEN %.4f | DISC REAL: %.4f | DISC FAKE: %.4f" %
-                      (epoch, num_epoch, batch, num_batch_train,
+                      (epoch, num_epoch, batch, num_batch_train*batch_size,
                        np.mean(loss_G_train), np.mean(loss_D_real_train), np.mean(loss_D_fake_train)))
 
-                #if batch % 20 == 0:
-                # Tensorboard 저장하기
-                output = fn_tonumpy(fn_denorm(output, mean=0.5, std=0.5)).squeeze()
-                output = np.clip(output, a_min=0, a_max=1)
+                for f in range(6):
+                    completed_temp = poisson_blend(cube[:,f,:,:,:], output[:,f,:,:,:], cube_mask[:,f,:,:,:])
+                    if f == 0:
+                        completed = completed_temp
+                    else:
+                        completed = torch.cat((completed,completed_temp),dim=1)
 
-                id = num_batch_train * (epoch - 1) + batch
-                for ff in range(6):
-                    plt.imsave(os.path.join(result_dir_train, 'png', '%04d_output_%04d.png' % {id,ff}), output[0][ff,:,:].squeeze(), cmap=cmap)
-                    writer_train.add_image('output_%04d.png', output[:,ff,:,:], id, dataformats='NHWC')
+                completed = torch.reshape(completed, (completed.shape[0], 6, nch, completed.shape[2], completed.shape[3]))
+
+                if batch % 4 == 0:
+                    # Tensorboard 저장하기
+                    id = num_batch_train * (epoch - 1) + batch
+
+                    completed = fn_tonumpy(fn_denorm(completed, mean=0.5, std=0.5))
+                    cube = fn_tonumpy(fn_denorm(cube, mean=0.5, std=0.5))
+
+                    cube_mask = torch.cat((cube_mask, cube_mask, cube_mask), dim=2)
+                    cube_mask = fn_tonumpy(fn_denorm(cube_mask, mean=0.5, std=0.5))
+
+                    x_cube_mask = fn_tonumpy(fn_denorm(x_cube_mask, mean=0.5, std=0.5))
+                    x_pano_mask = fn_tonumpy(fn_denorm(x_pano_mask, mean=0.5, std=0.5))
+
+                    equirec = c2e(completed[0], h=270, w=480, cube_format='list')
+
+                    for ff in range(6):
+                        # plt.imsave(os.path.join(result_dir_train, 'png', '%05d_input_cube%01d.png' % (id, ff)),
+                        #            cube[0][ff, :, :, :], cmap=cmap)
+                        # plt.imsave(os.path.join(result_dir_train, 'png', '%05d_input_cube_mask%01d.png' % (id, ff)),
+                        #            cube_mask[0][ff, :, :, :], cmap=cmap)
+                        plt.imsave(os.path.join(result_dir_train, 'png', '%05d_cube_mask_%01d.png' % (id, ff)),
+                                   x_cube_mask[0][ff, :, :, :], cmap=cmap)
+                        plt.imsave(os.path.join(result_dir_train, 'png', '%05d_output_%01d.png' % (id,ff)), completed[0][ff,:,:,:], cmap=cmap)
+
+                        # writer_train.add_image('cube_mask_%01d.png' %ff, x_cube_mask[:, ff, :, :, :],id, dataformats='NHWC')
+                        # writer_train.add_image('output_%01d.png' %ff, completed[:,ff,:,:,:], id, dataformats='NHWC')
+
+                    plt.imsave(os.path.join(result_dir_train, 'png', '%05d_pano_mask.png' % (id)),
+                               x_pano_mask[0, 0], cmap=cmap)
+                    plt.imsave(os.path.join(result_dir_train, 'png', '%05d_equi.png' % (id)),
+                               equirec, cmap=cmap)
+                    writer_train.add_image('pano_mask.png', x_pano_mask[:, 0, :, :, :], id, dataformats='NHWC')
+                    writer_train.add_image('equi.png', equirec, id, dataformats='HWC')
 
             writer_train.add_scalar('loss_G', np.mean(loss_G_train), epoch)
             writer_train.add_scalar('loss_D_real', np.mean(loss_D_real_train), epoch)
             writer_train.add_scalar('loss_D_fake', np.mean(loss_D_fake_train), epoch)
 
-            if epoch % 2 == 0 or epoch == num_epoch:
-                if data_parallel:
-                    parallel_save(ckpt_dir=ckpt_dir, netG=netG, netD=netD, optimG=optimG, optimD=optimD, epoch=epoch)
-                else:
-                    save(ckpt_dir=ckpt_dir, netG=netG, netD=netD, optimG=optimG, optimD=optimD, epoch=epoch)
+            if epoch % 20 == 0 or epoch == num_epoch:
+                parallel_save(ckpt_dir=ckpt_dir, netG=netG, netD=netD, optimG=optimG, optimD=optimD, epoch=epoch)
 
         writer_train.close()
 

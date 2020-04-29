@@ -35,7 +35,7 @@ class PanoramaDataset(data.Dataset):
     def __len__(self):
         return len(self.inp_paths)
     
-    def __getitem__(self, idx):
+    def __getitem__(self, idx, color_format='RGB'):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
@@ -62,20 +62,26 @@ class PanoramaDataset(data.Dataset):
             for l in self.face_mask_order:
                 if in_json['mask_flag']:
                     # (6, H, W, C)
-                    cube_mask_img.append(b64utf82ndarr(in_json['cube'][k][0]))
+                    cube_mask_img.append(b64utf82ndarr(in_json['cube'][l][0]))
             
-            sample_cube_img = np.asarray(sample_cube_img)            
+            sample_cube_img = np.asarray(sample_cube_img)
             sample_pano_img = np.asarray(sample_pano_img)
             
             if in_json['mask_flag']:
-                cube_mask_img = np.asarray(cube_mask_img)
+                np_cube_mask_img = np.asarray(cube_mask_img)
                 pano_mask_img = np.asarray(pano_mask_img)
-                cube_mask_img = (cube_mask_img[:,:,:,0]+cube_mask_img[:,:,:,1]+cube_mask_img[:,:,:,2])/3.0
-                pano_mask_img = (pano_mask_img[:,:,:,0]+pano_mask_img[:,:,:,1]+pano_mask_img[:,:,:,2])/3.0
-                cube_mask_img = cube_mask_img[...,np.newaxis]
+                for ff in range(6):
+                    cube_mask_img_temp = (np_cube_mask_img[ff,:,:,0]+np_cube_mask_img[ff,:,:,1]+np_cube_mask_img[ff,:,:,2])
+                    cube_mask_img_temp = cube_mask_img_temp[...,np.newaxis]
+                    cube_mask_img_temp = cube_mask_img_temp[np.newaxis,...]
+                    if ff == 0:
+                        cube_mask_img = cube_mask_img_temp
+                    else:
+                        cube_mask_img = np.concatenate((cube_mask_img,cube_mask_img_temp),axis=0)
+
+                pano_mask_img = (pano_mask_img[:,:,:,0]+pano_mask_img[:,:,:,1]+pano_mask_img[:,:,:,2])
                 pano_mask_img = pano_mask_img[...,np.newaxis]
-                
-        
+
         if in_json['mask_flag']:
             sample = {'cube': sample_cube_img, 'cube_mask': cube_mask_img, 'pano': sample_pano_img, 'pano_mask': pano_mask_img}
         else:
@@ -96,19 +102,19 @@ class Normalize(object):
 
     def __call__(self, sample):
         sample_cube_img, cube_mask_img, sample_pano_img, pano_mask_img = sample['cube'], sample['cube_mask'], sample['pano'], sample['pano_mask']
+
         sample_cube_img = sample_cube_img / 255.
         sample_pano_img = sample_pano_img / 255.
         cube_mask_img = cube_mask_img / 255.
         pano_mask_img = pano_mask_img / 255.
+
         cube_mask_img[cube_mask_img<0.5]=0.0
         cube_mask_img[cube_mask_img>=0.5]=1.0
         pano_mask_img[pano_mask_img<0.5]=0.0
         pano_mask_img[pano_mask_img>=0.5]=1.0
-        #sample_img = (sample_img-self.mean)/self.std
 
-        # mask already has 0, 1 value
-        #if mask_img is not None:
-        #    mask_img = mask_img/255.
+        sample_cube_img = (sample_cube_img - self.mean)/self.std
+        sample_pano_img = (sample_pano_img - self.mean) / self.std
 
         return {'cube': sample_cube_img, 'cube_mask': cube_mask_img, 'pano': sample_pano_img, 'pano_mask': pano_mask_img}
 
@@ -136,8 +142,8 @@ class Resize(object):
     def __call__(self, sample):
         sample_cube_img, cube_mask_img, sample_pano_img, pano_mask_img = sample['cube'], sample['cube_mask'], sample['pano'], sample['pano_mask']
 
-        sample_pano_img = resize(sample_pano_img,output_shape = (sample_pano_img.shape[0],self.shape[0],self.shape[1],3))
-        pano_mask_img = resize(pano_mask_img,output_shape = (pano_mask_img.shape[0],self.shape[0],self.shape[1],1))
+        sample_pano_img = resize(sample_pano_img, output_shape = (sample_pano_img.shape[0],self.shape[0],self.shape[1],3),preserve_range=True)
+        pano_mask_img = resize(pano_mask_img, output_shape = (pano_mask_img.shape[0],self.shape[0],self.shape[1],1),preserve_range=True)
 
         return {'cube': sample_cube_img, 'cube_mask': cube_mask_img, 'pano': sample_pano_img, 'pano_mask': pano_mask_img}
         
@@ -150,8 +156,8 @@ def show_imgs(image, fig):
    
 
 if __name__ == "__main__":
-    transformed_dataset = PanoramaDataset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/images/out_temp_image', transform=transforms.Compose([Normalize(), Resize((1080,720,3)),ToTensor()]))
-    #transformed_dataset = PanoramaDataset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/images/out_temp_image')
+    #transformed_dataset = PanoramaDataset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/images/out_temp_image', transform=transforms.Compose([Normalize(), Resize((1080,720,3)),ToTensor()]))
+    transformed_dataset = PanoramaDataset(in_dir='/home/sw/360VR+Inpainting/code/erp_inpainting/images/out_temp_image')
     for i in range(len(transformed_dataset)):
         sample = transformed_dataset[i]
 
@@ -167,4 +173,10 @@ if __name__ == "__main__":
         if i == len(transformed_dataset) - 1:
             plt.imshow(sample['pano'][0])
             plt.axis('off')
+            plt.show()
+
+        sample['cube_mask'] = np.concatenate((sample['cube_mask'],sample['cube_mask'],sample['cube_mask']),axis=3)
+        if i == len(transformed_dataset) - 1:
+            fig = plt.figure()
+            show_imgs(sample['cube_mask'], fig)
             plt.show()

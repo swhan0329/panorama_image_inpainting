@@ -16,12 +16,13 @@ class Generator(nn.Module):
         self.cube_out_channels = cube_out_channels
         self.decoder_in_channels=decoder_in_channels
         self.decoder_out_channels=decoder_out_channels
+
         self.learning_type=learning_type
         self.nker=nker
         self.norm = norm
 
-        self.pano_encoder=PanoNet(self.pano_in_channels,self.pano_out_channels,self.nker,self.norm)
-        self.cube_encoder=CubeNet(self.cube_in_channels,self.cube_out_channels,self.nker,self.norm)
+        self.pano_encoder = PanoNet(self.pano_in_channels,self.pano_out_channels,self.nker,self.norm)
+        self.cube_encoder = CubeNet(self.cube_in_channels,self.cube_out_channels,self.nker,self.norm)
         self.decoder = Decoder(self.decoder_in_channels,self.decoder_out_channels,self.nker,self.norm)
 
     def forward(self,pano_x,cube_x):
@@ -66,11 +67,13 @@ class PanoNet(nn.Module):
         self.enc5_1 = layers.CBR2d(in_channels=8 * nker, out_channels=pano_out_channels, norm=norm)
 
         self.fc6 = nn.Sequential()
-        self.fc6.add_module('fc6',nn.Linear(pano_out_channels*20*11, 4096))
+        self.fc6.add_module('fc6', nn.Linear(pano_out_channels * 16 * 30, 1024)) # 270,480
+        #self.fc6.add_module('fc6', nn.Linear(pano_out_channels * 30 * 40, 1024)) # 480p
+        #self.fc6.add_module('fc6',nn.Linear(pano_out_channels*20*11, 2048)) # 320,180
         self.fc6.add_module('relu6',nn.ReLU(inplace=True))
         self.fc6.add_module('drop6',nn.Dropout(p=0.5))
 
-        self.fc7 = nn.Linear(4096,pano_out_channels)
+        self.fc7 = nn.Linear(1024,pano_out_channels)
 
     def forward(self, x):
         B, C, H, W = x.shape
@@ -133,12 +136,12 @@ class CubeNet(nn.Module):
         self.fc6.add_module('drop6',nn.Dropout(p=0.5))
 
         self.fc7 = nn.Sequential()
-        self.fc7.add_module('fc7',nn.Linear(6*1024,4096))
+        self.fc7.add_module('fc7',nn.Linear(6*1024,1024))
         self.fc7.add_module('relu7',nn.ReLU(inplace=True))
         self.fc7.add_module('drop7',nn.Dropout(p=0.5))
 
         self.fc8 = nn.Sequential()
-        self.fc8.add_module('fc8',nn.Linear(4096, cube_out_channels))
+        self.fc8.add_module('fc8',nn.Linear(1024, cube_out_channels))
 
     def forward(self, x):
         B,FC,H,W = x.size() # batch, face, channel, height, width

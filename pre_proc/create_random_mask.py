@@ -51,7 +51,6 @@ def create_random_mask(shape):
         thickness = randint(3, size)
         cv2.ellipse(mask, (x1,y1), (s1,s2), a1, a2, a3,(1,1,1), thickness)
 
-    mask = 1-mask
     mask = mask * 255.
 
     return mask
