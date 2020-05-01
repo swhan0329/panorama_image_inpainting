@@ -1,7 +1,6 @@
 import numpy as np
 
-#from pre_proc import sphere_utils
-import sphere_utils
+from . import sphere_utils
 
 def c2e(cubemap, h, w, mode='bilinear', cube_format='dice'):
     if mode == 'bilinear':

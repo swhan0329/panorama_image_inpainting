@@ -1,13 +1,13 @@
 import numpy as np
 
-#from pre_proc import sphere_utils
-import sphere_utils
+from . import sphere_utils
 
 def e2c(e_img, face_w=256, mode='bilinear', cube_format='dice'):
     '''
     e_img:  ndarray in shape of [H, W, *]
     face_w: int, the length of each face of the cubemap
     '''
+
     assert len(e_img.shape) == 3
     h, w = e_img.shape[:2]
     if mode == 'bilinear':

@@ -122,6 +122,7 @@ def train(args):
             loss_G_train = []
             loss_D_real_train = []
             loss_D_fake_train = []
+            loss_mse_train = []
 
             for batch, sample in enumerate(loader_train, 1):
                 # forward pass
@@ -156,6 +157,19 @@ def train(args):
 
                 _,_,_,output = netG(input_pano,input_cube)
 
+                output_cp = output
+                for f in range(6):
+                    output_temp = output_cp[:, 3 * f:3 * (f + 1), :, :]
+                    output_temp = torch.reshape(output_temp, (
+                    output_temp.shape[0], 1, output_temp.shape[1], output_temp.shape[2], output_temp.shape[3]))
+                    if f == 0:
+                        output = output_temp
+                    else:
+                        output = torch.cat((output, output_temp), dim=1)
+
+                inputnetD = cube_mask * output + (1 - cube_mask) * cube
+                inputnetD = inputnetD.view((inputnetD.shape[0],inputnetD.shape[1]*inputnetD.shape[2],inputnetD.shape[3],inputnetD.shape[4]))
+
                 # backward netD
                 set_requires_grad(netD, True)
                 optimD.zero_grad()
@@ -170,7 +184,7 @@ def train(args):
                 label_cube = label_cube.to(dtype=torch.float32)
 
                 pred_real = netD(label_cube)
-                pred_fake = netD(output.detach())
+                pred_fake = netD(inputnetD.detach())
 
                 loss_D_real = fn_loss(pred_real, torch.ones_like(pred_real))
                 loss_D_fake = fn_loss(pred_fake, torch.zeros_like(pred_fake))
@@ -183,11 +197,12 @@ def train(args):
                 set_requires_grad(netD, False)
                 optimG.zero_grad()
 
-                pred_fake = netD(output)
+                pred_fake = netD(inputnetD)
 
-                output = torch.reshape(output, (output.shape[0], 6, nch, output.shape[2], output.shape[3]))
-                loss_G = (fn_loss(pred_fake, torch.ones_like(pred_fake)) + completion_network_loss(cube, output, cube_mask))/2.
-
+                #output = torch.reshape(output, (output.shape[0], 6, nch, output.shape[2], output.shape[3]))
+                loss_G = (0.1*fn_loss(pred_fake, torch.ones_like(pred_fake)) + completion_network_loss(cube, output, cube_mask))/2.
+                loss_mse = completion_network_loss(cube, output, cube_mask)
+                
                 loss_G.backward()
                 optimG.step()
 
@@ -195,27 +210,31 @@ def train(args):
                 loss_G_train += [loss_G.item()]
                 loss_D_real_train += [loss_D_real.item()]
                 loss_D_fake_train += [loss_D_fake.item()]
-
+                loss_mse_train += [loss_mse.item()]
                 print("TRAIN: EPOCH %04d / %04d | BATCH %04d / %04d | "
-                      "GEN %.4f | DISC REAL: %.4f | DISC FAKE: %.4f" %
+                      "GEN %.4f | MSE %.4f | DISC REAL: %.4f | DISC FAKE: %.4f" %
                       (epoch, num_epoch, batch, num_batch_train*batch_size,
-                       np.mean(loss_G_train), np.mean(loss_D_real_train), np.mean(loss_D_fake_train)))
+                       np.mean(loss_G_train), np.mean(loss_mse_train), np.mean(loss_D_real_train), np.mean(loss_D_fake_train)))
 
-                for f in range(6):
-                    completed_temp = poisson_blend(cube[:,f,:,:,:], output[:,f,:,:,:], cube_mask[:,f,:,:,:])
-                    if f == 0:
-                        completed = completed_temp
-                    else:
-                        completed = torch.cat((completed,completed_temp),dim=1)
+                # for f in range(6):
+                #     completed_temp = poisson_blend(cube[:,f,:,:,:], output[:,f,:,:,:], cube_mask[:,f,:,:,:])
+                #     if f == 0:
+                #         completed = completed_temp
+                #     else:
+                #         completed = torch.cat((completed,completed_temp),dim=1)
+                #
+                # completed = torch.reshape(completed, (completed.shape[0], 6, nch, completed.shape[2], completed.shape[3]))
+                inpainted_result = cube_mask * output + (1-cube_mask) * cube
 
-                completed = torch.reshape(completed, (completed.shape[0], 6, nch, completed.shape[2], completed.shape[3]))
-
-                if batch % 4 == 0:
+                if batch % 500 == 0:
                     # Tensorboard 저장하기
                     id = num_batch_train * (epoch - 1) + batch
 
-                    completed = fn_tonumpy(fn_denorm(completed, mean=0.5, std=0.5))
+                    #completed = fn_tonumpy(fn_denorm(completed, mean=0.5, std=0.5))
+                    inpainted_result = fn_tonumpy(fn_denorm(inpainted_result, mean=0.5, std=0.5))
                     cube = fn_tonumpy(fn_denorm(cube, mean=0.5, std=0.5))
+
+                    output = fn_tonumpy(fn_denorm(output,mean=0.5,std=0.5))
 
                     cube_mask = torch.cat((cube_mask, cube_mask, cube_mask), dim=2)
                     cube_mask = fn_tonumpy(fn_denorm(cube_mask, mean=0.5, std=0.5))
@@ -223,33 +242,36 @@ def train(args):
                     x_cube_mask = fn_tonumpy(fn_denorm(x_cube_mask, mean=0.5, std=0.5))
                     x_pano_mask = fn_tonumpy(fn_denorm(x_pano_mask, mean=0.5, std=0.5))
 
-                    equirec = c2e(completed[0], h=270, w=480, cube_format='list')
-
                     for ff in range(6):
                         # plt.imsave(os.path.join(result_dir_train, 'png', '%05d_input_cube%01d.png' % (id, ff)),
                         #            cube[0][ff, :, :, :], cmap=cmap)
                         # plt.imsave(os.path.join(result_dir_train, 'png', '%05d_input_cube_mask%01d.png' % (id, ff)),
                         #            cube_mask[0][ff, :, :, :], cmap=cmap)
-                        plt.imsave(os.path.join(result_dir_train, 'png', '%05d_cube_mask_%01d.png' % (id, ff)),
-                                   x_cube_mask[0][ff, :, :, :], cmap=cmap)
-                        plt.imsave(os.path.join(result_dir_train, 'png', '%05d_output_%01d.png' % (id,ff)), completed[0][ff,:,:,:], cmap=cmap)
+                        # plt.imsave(os.path.join(result_dir_train, 'png', '%05d_cube_mask_%01d.png' % (id, ff)),
+                        #            x_cube_mask[0][ff, :, :, :], cmap=cmap)
+                        plt.imsave(os.path.join(result_dir_train, 'png', '%05d_completed_%01d.png' % (id,ff)), inpainted_result[0][ff,:,:,:], cmap=cmap)
+                        plt.imsave(os.path.join(result_dir_train, 'png', '%05d_output_%01d.png' % (id, ff)),
+                                   output[0][ff, :, :, :], cmap=cmap)
 
                         # writer_train.add_image('cube_mask_%01d.png' %ff, x_cube_mask[:, ff, :, :, :],id, dataformats='NHWC')
                         # writer_train.add_image('output_%01d.png' %ff, completed[:,ff,:,:,:], id, dataformats='NHWC')
 
                     plt.imsave(os.path.join(result_dir_train, 'png', '%05d_pano_mask.png' % (id)),
                                x_pano_mask[0, 0], cmap=cmap)
-                    plt.imsave(os.path.join(result_dir_train, 'png', '%05d_equi.png' % (id)),
-                               equirec, cmap=cmap)
+
+                    #equirec = c2e(completed[0], h=270, w=480, cube_format='list')
+                    equirec = c2e(inpainted_result[0], h=270, w=480, cube_format='list')
+
                     writer_train.add_image('pano_mask.png', x_pano_mask[:, 0, :, :, :], id, dataformats='NHWC')
                     writer_train.add_image('equi.png', equirec, id, dataformats='HWC')
 
             writer_train.add_scalar('loss_G', np.mean(loss_G_train), epoch)
             writer_train.add_scalar('loss_D_real', np.mean(loss_D_real_train), epoch)
             writer_train.add_scalar('loss_D_fake', np.mean(loss_D_fake_train), epoch)
+            writer_train.add_scalar('loss_mse', np.mean(loss_mse_train), epoch)
 
             if epoch % 20 == 0 or epoch == num_epoch:
-                parallel_save(ckpt_dir=ckpt_dir, netG=netG, netD=netD, optimG=optimG, optimD=optimD, epoch=epoch)
+                save(ckpt_dir=ckpt_dir, netG=netG, netD=netD, optimG=optimG, optimD=optimD, epoch=epoch)
 
         writer_train.close()
 

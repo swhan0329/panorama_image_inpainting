@@ -213,7 +213,7 @@ def cube_h2dice(cube_h):
 
 
 def cube_dice2h(cube_dice):
-    w = cube_dice.shape[0] // 3
+    w = cube_dice.shape[1] // 3
     assert cube_dice.shape[0] == w * 3 and cube_dice.shape[1] == w * 4
     cube_h = np.zeros((w, w * 6, cube_dice.shape[2]), dtype=cube_dice.dtype)
     # Order: F R B L U D

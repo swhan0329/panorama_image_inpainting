@@ -113,7 +113,7 @@ class Normalize(object):
         pano_mask_img[pano_mask_img<0.5]=0.0
         pano_mask_img[pano_mask_img>=0.5]=1.0
 
-        sample_cube_img = (sample_cube_img - self.mean)/self.std
+        sample_cube_img = (sample_cube_img - self.mean) / self.std
         sample_pano_img = (sample_pano_img - self.mean) / self.std
 
         return {'cube': sample_cube_img, 'cube_mask': cube_mask_img, 'pano': sample_pano_img, 'pano_mask': pano_mask_img}

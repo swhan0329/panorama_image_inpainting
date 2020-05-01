@@ -1,2 +1,16 @@
 
 images/
+
+.vscode/
+
+.idea/
+
+__pycache__/
+
+log/
+
+result/
+
+log_desktop/
+
+result_desktop/

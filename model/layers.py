@@ -29,12 +29,12 @@ class DECBR2d(nn.Module):
         return self.cbr(x)
 
 class CBR2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=True, norm="bnorm", relu=0.0):
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, dilation=1, padding=1, bias=True, norm="bnorm", relu=0.0):
         super().__init__()
 
         layers = []
         layers += [nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
-                             kernel_size=kernel_size, stride=stride, padding=padding,
+                             kernel_size=kernel_size, stride=stride, dilation=dilation, padding=padding,
                              bias=bias)]
 
         if not norm is None:
