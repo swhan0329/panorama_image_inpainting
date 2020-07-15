@@ -7,7 +7,6 @@ import glob
 import base64
 import json
 import argparse
-#from multiprocessing import Process
 
 from tqdm import tqdm
 import numpy as np
@@ -15,7 +14,6 @@ from PIL import Image
 
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from utils.equi_to_cube import e2c
-
 
 def ndarr2b64utf8(img):
     img_t = Image.fromarray(img)
@@ -56,20 +54,9 @@ def save_image(inp_path, output_dir, mask_path=None, face_w=128):
     if mask_path is not None:
         img_mask = Image.open(mask_path, "r")
         inp_np_mask = np.asarray(img_mask)
+
         cm_mask, cl_mask = e2c(inp_np_mask, face_w=face_w)
         out_dict['mask_flag'] = True
-
-    pano_imgs = dict()
-    b_string = ndarr2b64utf8(inp_np)
-    if mask_path is None:
-        pano_imgs['pano'] = [b_string]
-        
-    else:
-        b_string_mask = ndarr2b64utf8(inp_np_mask)
-        pano_imgs['pano'] = [b_string]
-        pano_imgs['pano_mask']=[b_string_mask]
-    
-    out_dict['pano'] = pano_imgs
 
     cm, cl = e2c(inp_np, face_w=face_w)
     
@@ -97,7 +84,7 @@ if __name__ == "__main__":
         path to panorama mask directory. \
         The file name of mask have to be matched with the input image. \
         (<input dir>/*.png)")
-    parser.add_argument("-face_w", default=128)
+    parser.add_argument("-face_w", default=256)
     parser.add_argument("-o", default="output_dir")
     args = parser.parse_args()
 
@@ -124,13 +111,5 @@ if __name__ == "__main__":
             if k in name_path_pair_mask:
                 pair[k] = {'pano': v, 'cube': name_path_pair_cube[k], 'mask': name_path_pair_mask[k]}
 
-        for k, v in tqdm(pair.items(), desc="pano cube mask pair"):
+        for k, v in tqdm(pair.items(), desc="cube mask pair"):
             save_image(v['pano'], out_dir, mask_path=v['mask'], face_w=face_w)
-
-
-
-
-
-
-
-
