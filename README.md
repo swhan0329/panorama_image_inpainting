@@ -10,11 +10,7 @@
         -face_w 256 \ #width and height of face of cube
         -fmt 'cube' # erp or cube
 ```
-2. create tf_records if you use tensorflow.
-```bash
-    python create_tf_record.py
-```
-3. create random mask
+2. create random mask
 ```bash
     python create_random_mask.py \
         -i 'path to input directory' \ #(<input dir>/*.json)
