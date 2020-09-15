@@ -1,6 +1,6 @@
 # A 360-degree panoramic image inpainting network using a cube map
-This is an official PyTorch code of a 360-degree panoramic image inpainting network.
-The paper will be published on CMC journal soon.
+This is an official PyTorch code of a 360-degree panoramic image inpainting network v2.
+The paper version 1 will be published on CMC journal soon.
 
 ## pre-processing
 1. create data as json format
