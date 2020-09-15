@@ -34,6 +34,6 @@ Inpainting has been continuously studied in the field of computer vision. As art
 3. Set some hyperparameters following your machine(e.g. The number of gpus, batch_size) in main.py.
 4. Run the main.py file.
 ```
-Python main.py
+python main.py
 ```
 5. After some epochs, you can find checkpoints, log in your folder.
