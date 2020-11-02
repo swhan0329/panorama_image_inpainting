@@ -1,5 +1,6 @@
 # PIGAN
 This is an official PyTorch code of a 360-degree panoramic image inpainting network v2 paper.
+paper: https://arxiv.org/abs/2010.16003
 
 ## Title
 PIGAN: A 360-degree Panoramic Image Inpainting Network using a Cube Map
