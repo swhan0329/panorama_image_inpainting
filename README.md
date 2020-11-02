@@ -4,7 +4,7 @@ This is an official PyTorch code of a 360-degree panoramic image inpainting netw
 paper: https://arxiv.org/abs/2010.16003
 
 ## Title
-PIGAN: A 360-degree Panoramic Image Inpainting Network using a Cube Map
+PIINET: A 360-degree Panoramic Image Inpainting Network using a Cube Map
 
 ## Abstract
 Inpainting has been continuously studied in the field of computer vision. As artificial intelligence technology developed, deep learning technology was introduced in inpainting research, helping to improve performance. Currently, the input target of an inpainting algorithm using deep learning has been studied from a single image to a video. However, deep learning-based inpainting technology for panoramic images has not been actively studied. We propose a 360-degree panoramic image inpainting method using generative adversarial networks (GANs). The proposed network inputs a 360-degree equirectangular format panoramic image converts it into a cube map format, which has relatively little distortion and uses it as a training network. Since the cube map format is used, the correlation of the six sides of the cube map should be considered. Therefore, all faces of the cube map are used as input for the whole discriminative network, and each face of the cube map is used as input for the slice discriminative network to determine the authenticity of the generated image. The proposed network performed qualitatively better than existing single-image inpainting algorithms and baseline algorithms.
