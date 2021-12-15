@@ -605,7 +605,7 @@ def test(args):
         num_batch_test = np.ceil(num_data_test / 1)
 
     ## 네트워크 생성하기
-    if network == "PInet_new":
+    if network == "PIUnet":
         netG = Generator(in_channels=4, out_channels=nch, nker=nker, norm=norm)
         netWholeD = WholeDis(in_channels=4 * 6, out_channels=1, nker=nker, norm=norm)
         netSliceD = SliceDis(in_channels=4, out_channels=1, nker=nker, norm=norm)
