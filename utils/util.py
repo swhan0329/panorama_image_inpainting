@@ -52,6 +52,23 @@ def init_weights(net, init_type='normal', init_gain=0.02):
     print('initialize network with %s' % init_type)
     net.apply(init_func)  # apply the initialization function <init_func>
 
+def face_save(ckpt_dir, netFaceG, netFaceD, optimFG, optimFD, epoch):
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir)
+
+    torch.save({'netFaceG': netFaceG.state_dict(), 'netFaceD': netFaceD.state_dict(),
+                'optimFG': optimFG.state_dict(), 'optimFD': optimFD.state_dict()},
+               "%s/model_epoch%d.pth" % (ckpt_dir, epoch))
+
+def cube_save(ckpt_dir,netCubeG, netWholeD,
+                    netSliceD,optimCG, optimCD,epoch):
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir)
+
+    torch.save({'netCubeG': netCubeG.state_dict(), 'netWholeD': netWholeD.state_dict(),
+                'netSliceD': netSliceD.state_dict(), 'optimCG': optimCG.state_dict(), 'optimCD': optimCD.state_dict()},
+               "%s/model_epoch%d.pth" % (ckpt_dir, epoch))
+
 def save(ckpt_dir, netG, netD, optimG, optimD, epoch):
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
@@ -88,6 +105,47 @@ def load(ckpt_dir, netG, netD, optimG, optimD):
     epoch = int(ckpt_lst[-1].split('epoch')[1].split('.pth')[0])
 
     return netG, netD, optimG, optimD, epoch
+
+def face_load(ckpt_dir, netFaceG, netFaceD, optimFG, optimFD):
+    if not os.path.exists(ckpt_dir):
+        epoch = 0
+        return netFaceG, netFaceD, optimFG, optimFD, epoch
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    ckpt_lst = os.listdir(ckpt_dir)
+    ckpt_lst.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
+
+    dict_model = torch.load('%s/%s' % (ckpt_dir, ckpt_lst[-1]), map_location='cpu')
+
+    netFaceG.load_state_dict(dict_model['netFaceG'])
+    netFaceD.load_state_dict(dict_model['netFaceD'])
+    optimFG.load_state_dict(dict_model['optimFG'])
+    optimFD.load_state_dict(dict_model['optimFD'])
+    epoch = int(ckpt_lst[-1].split('epoch')[1].split('.pth')[0])
+
+    return netFaceG, netFaceD, optimFG, optimFD, epoch
+
+def cube_load(ckpt_dir,netCubeG, netWholeD,netSliceD, optimCG, optimCD):
+    if not os.path.exists(ckpt_dir):
+        epoch = 0
+        return netCubeG, netWholeD,netSliceD, optimCG, optimCD, epoch
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    ckpt_lst = os.listdir(ckpt_dir)
+    ckpt_lst.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
+
+    dict_model = torch.load('%s/%s' % (ckpt_dir, ckpt_lst[-1]), map_location='cpu')
+
+    netCubeG.load_state_dict(dict_model['netCubeG'])
+    netWholeD.load_state_dict(dict_model['netWholeD'])
+    netSliceD.load_state_dict(dict_model['netSliceD'])
+    optimCG.load_state_dict(dict_model['optimCG'])
+    optimCD.load_state_dict(dict_model['optimCD'])
+    epoch = int(ckpt_lst[-1].split('epoch')[1].split('.pth')[0])
+
+    return netCubeG, netWholeD,netSliceD, optimCG, optimCD, epoch
 
 def poisson_blend(x, output, mask):
     """
