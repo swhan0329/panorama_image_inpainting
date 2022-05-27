@@ -1,4 +1,4 @@
-# PIGAN
+# PIINET
 This is an official PyTorch code of a 360-degree panoramic image inpainting network v2 paper.
 
 paper: https://www.techscience.com/cmc/v66n1/40442
