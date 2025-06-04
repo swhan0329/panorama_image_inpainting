@@ -1,11 +1,22 @@
 import os
 import math
+import random
 import numpy as np
 
 import cv2
 import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
+
+
+def set_random_seed(seed: int = 0):
+    """Fix all random seeds for reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 def set_requires_grad(nets, requires_grad=False):
@@ -196,3 +207,12 @@ def poisson_blend(x, output, mask):
             ret.append(out)
     ret = torch.cat(ret, dim=0)
     return ret
+
+
+def save_pretrained_weights(ckpt_dir: str, netFaceG, netCubeG, filename: str = 'pretrained.pth'):
+    """Save only generator weights for inference."""
+    if not os.path.exists(ckpt_dir):
+        os.makedirs(ckpt_dir)
+    torch.save({'netFaceG': netFaceG.state_dict(),
+                'netCubeG': netCubeG.state_dict()},
+               os.path.join(ckpt_dir, filename))
