@@ -96,7 +96,7 @@ def parallel_save(ckpt_dir, netG, netD, optimG, optimD, epoch):
                 'optimG': optimG.module.state_dict(), 'optimD': optimD.module.state_dict()},
                "%s/model_epoch%d.pth" % (ckpt_dir, epoch))
 
-## 네트워크 불러오기
+## Load network
 def load(ckpt_dir, netG, netD, optimG, optimD):
     if not os.path.exists(ckpt_dir):
         epoch = 0

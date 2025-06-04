@@ -2,7 +2,6 @@ import argparse
 
 from train import *
 from utils.util import set_random_seed
-## Parser 생성하기
 
 parser = argparse.ArgumentParser()
 
