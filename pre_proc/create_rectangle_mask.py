@@ -21,7 +21,7 @@ def make_save_random_mask(inp_path, mask_shape, output_dir=None):
 
 def create_rectangle_mask(shape):
     """
-    Generates a random irregular mask with lines, circles and elipses
+    Generates a random rectangular mask.
     """
 
     mask = np.zeros((shape[1], shape[0], 3), np.uint8)
