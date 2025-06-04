@@ -29,7 +29,7 @@ if __name__ == "__main__":
         os.makedirs(out_dir)
 
 
-    for inp_path in inp_paths:
+    for inp_path in tqdm(inp_paths, desc="decode"):
         base_name, _ = os.path.splitext(os.path.basename(inp_path))
         with open(inp_path, "r") as f:
             in_json = json.load(f)
