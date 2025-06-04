@@ -9,7 +9,7 @@ from . import layers
 
 class Generator(nn.Module):
     def __init__(self, pano_in_channels, cube_in_channels, pano_out_channels, cube_out_channels, decoder_in_channels,
-                 decoder_out_channels, learning_type="plain", nker=64, norm="bonrm"):
+                  decoder_out_channels, learning_type="plain", nker=64, norm="bnorm"):
         super(Generator, self).__init__()
 
         self.pano_in_channels = pano_in_channels
