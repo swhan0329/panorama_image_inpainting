@@ -11,7 +11,11 @@ Inpainting has been continuously studied in the field of computer vision. As art
 
 ## Step for using this code
 1. Download this repository in your local computer.
-2. Run download.sh file for downloading 360-degree panoramic image dataset. (Dataset paper link: https://cgv.cs.nthu.edu.tw/projects/360SP)
+2. Install the required Python packages.
+```bash
+pip install -r requirements.txt
+```
+3. Run download.sh file for downloading 360-degree panoramic image dataset. (Dataset paper link: https://cgv.cs.nthu.edu.tw/projects/360SP)
 ```bash
     python download.sh
 ```
@@ -33,9 +37,9 @@ Inpainting has been continuously studied in the field of computer vision. As art
         -mask_shape_h 1080 \ # height of mask
         -o 'path to output directory'
 ```
-3. Set some hyperparameters following your machine(e.g. The number of gpus, batch_size) in main.py.
-4. Run the main.py file.
+4. Set some hyperparameters following your machine(e.g. The number of gpus, batch_size) in main.py.
+5. Run the main.py file.
 ```
 python main.py
 ```
-5. After some epochs, you can find checkpoints, log in your folder.
+6. After some epochs, you can find checkpoints, log in your folder.
