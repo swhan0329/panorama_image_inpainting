@@ -2,7 +2,7 @@ import argparse
 
 from train import *
 torch.manual_seed(2020)
-## Parser 생성하기
+## Create parser
 
 parser = argparse.ArgumentParser()
 
