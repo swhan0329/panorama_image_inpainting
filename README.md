@@ -43,3 +43,13 @@ pip install -r requirements.txt
 python main.py
 ```
 6. After some epochs, you can find checkpoints, log in your folder.
+
+### Demo using pretrained weights
+
+To run inference with saved weights, execute `demo.py` and specify the
+pretrained checkpoint directory and data directory containing test images
+in JSON format:
+
+```bash
+python demo.py --data_dir ./demo_data --ckpt_dir ./checkpoint_s256 --result_dir ./demo_result
+```

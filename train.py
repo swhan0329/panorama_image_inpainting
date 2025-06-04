@@ -6,6 +6,7 @@ from data.dataset import *
 from pre_proc.create_data import *
 from utils.util import *
 from utils.cube_to_equi import c2e
+import numpy as np
 
 import matplotlib.pyplot as plt
 from torch import autograd
@@ -14,7 +15,7 @@ from torch.utils.data import DataLoader
 
 
 def train(args):
-    torch.manual_seed(2020)
+    set_random_seed(args.seed)
     ## 트레이닝 파라메터 설정하기
     mode = args.mode
     train_continue = args.train_continue
@@ -76,10 +77,13 @@ def train(args):
         dataset_val = PanoramaDataset(in_dir=os.path.join(
             data_dir, 'val'), transform=transform_val)
 
+        worker_init = lambda worker_id: np.random.seed(args.seed + worker_id)
         loader_train = DataLoader(
-            dataset_train, batch_size=batch_size, shuffle=True, num_workers=4)
+            dataset_train, batch_size=batch_size, shuffle=True, num_workers=4,
+            worker_init_fn=worker_init)
         loader_val = DataLoader(
-            dataset_val, batch_size=batch_size, shuffle=False, num_workers=4)
+            dataset_val, batch_size=batch_size, shuffle=False, num_workers=4,
+            worker_init_fn=worker_init)
 
         # 그밖에 부수적인 variables 설정하기
         num_data_train = len(loader_train)
@@ -540,9 +544,10 @@ def train(args):
 
         writer_val.close()
         writer_train.close()
+        save_pretrained_weights(ckpt_dir, netFaceG, netCubeG)
 
 def test(args):
-    torch.manual_seed(2020)
+    set_random_seed(args.seed)
     ## test 파라메터 설정하기
     mode = args.mode
     data_parallel = args.data_parallel
@@ -599,7 +604,9 @@ def test(args):
         transform_test = transforms.Compose([Normalize(), ToTensor()])
 
         dataset_test = PanoramaDataset(in_dir=os.path.join(data_dir, 'test'), transform=transform_test)
-        loader_test = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=1)
+        worker_init = lambda worker_id: np.random.seed(args.seed + worker_id)
+        loader_test = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=1,
+                                worker_init_fn=worker_init)
 
         # 그밖에 부수적인 variables 설정하기
         num_data_test = len(dataset_test)

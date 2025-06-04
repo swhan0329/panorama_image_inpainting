@@ -1,7 +1,7 @@
 import argparse
 
 from train import *
-torch.manual_seed(2020)
+from utils.util import set_random_seed
 ## Parser 생성하기
 
 parser = argparse.ArgumentParser()
@@ -31,9 +31,12 @@ parser.add_argument("--norm",default="bnorm",type=str,dest="norm")
 
 parser.add_argument("--network", default="PIUnet", choices=['PInet','PIUnet'], type=str, dest="network")
 
+parser.add_argument("--seed", default=2020, type=int, dest="seed")
+
 args = parser.parse_args()
 
 if __name__ == "__main__":
+    set_random_seed(args.seed)
     if args.mode == "train":
         train(args)
     elif args.mode == "test":
