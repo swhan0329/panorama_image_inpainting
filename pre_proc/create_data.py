@@ -101,7 +101,7 @@ if __name__ == "__main__":
     if is_mask_pair:
         mask_paths = glob.glob(os.path.join(mask_dir, "*.png"))
 
-        # crate pair
+        # create pair
         name_path_pair_pano = create_name_pair(img_paths)
         name_path_pair_cube = create_name_pair(img_paths)
         name_path_pair_mask = create_name_pair(mask_paths)
