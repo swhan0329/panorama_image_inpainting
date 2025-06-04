@@ -85,8 +85,11 @@ class PanoramaDataset(data.Dataset):
         if in_json['mask_flag']:
             sample = {'cube': sample_cube_img, 'cube_mask': cube_mask_img, 'pano': sample_pano_img, 'pano_mask': pano_mask_img}
         else:
-            cube_mask_img = np.zeros(sample_cube_img.shape) # make mask's value all zero
-            pano_mask_img = np.zeros(sample_pano_img.shape) # make mask's value all zero
+            # create empty mask arrays with single channel
+            cube_mask_shape = (sample_cube_img.shape[0], sample_cube_img.shape[1], sample_cube_img.shape[2], 1)
+            pano_mask_shape = (sample_pano_img.shape[0], sample_pano_img.shape[1], sample_pano_img.shape[2], 1)
+            cube_mask_img = np.zeros(cube_mask_shape)
+            pano_mask_img = np.zeros(pano_mask_shape)
             sample = {'cube': sample_cube_img, 'cube_mask': cube_mask_img, 'pano': sample_pano_img, 'pano_mask': pano_mask_img}
 
         if self.transform:
