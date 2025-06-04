@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 
 def train(args):
     torch.manual_seed(2020)
-    ## 트레이닝 파라메터 설정하기
+    ## Set training parameters
     mode = args.mode
     train_continue = args.train_continue
     data_parallel = args.data_parallel
@@ -55,7 +55,7 @@ def train(args):
 
     print("device: %s" % gpu)
 
-    ## 디렉토리 생성하기
+    ## Create directories
     result_dir_train = os.path.join(result_dir, 'train')
     result_dir_val = os.path.join(result_dir, 'val')
     result_dir_test = os.path.join(result_dir, 'test')
@@ -66,7 +66,7 @@ def train(args):
     if not os.path.exists(result_dir_test):
         os.makedirs(os.path.join(result_dir_test, 'png'))
         
-    ## 네트워크 학습하기
+    ## Prepare for network training
     if mode == 'train':
         transform_train = transforms.Compose([Normalize(), ToTensor()])
         transform_val = transforms.Compose([Normalize(), ToTensor()])
@@ -81,14 +81,14 @@ def train(args):
         loader_val = DataLoader(
             dataset_val, batch_size=batch_size, shuffle=False, num_workers=4)
 
-        # 그밖에 부수적인 variables 설정하기
+        # Set additional auxiliary variables
         num_data_train = len(loader_train)
         num_batch_train = np.ceil(num_data_train / batch_size)
 
         num_data_val = len(loader_val)
         num_batch_val = np.ceil(num_data_val / batch_size)
 
-    ## 네트워크 생성하기
+    ## Create network
     if network == "PIUnet":
         netFaceG = FaceGenerator(
             in_channels=4, out_channels=3, nker=nker, norm=norm, relu=True)
@@ -114,18 +114,18 @@ def train(args):
         netWholeD = netWholeD.to(gpu)
         netSliceD = netSliceD.to(gpu)
 
-    ## 손실함수 정의하기
+    ## Define loss functions
     fn_l1 = nn.L1Loss().to(gpu)
     fn_gan = nn.BCELoss().to(gpu)
 
-    ## Optimizer 설정하기  
+    ## Set up optimizers
     optimFG = torch.optim.Adam(netFaceG.parameters(), lr=lr, betas=(0.5, 0.999))
     optimCG = torch.optim.Adam(netCubeG.parameters(), lr=lr, betas=(0.5, 0.999))
     optimFD = torch.optim.Adam(netFaceD.parameters(), lr=lr, betas=(0.5, 0.999))
     d_params = list(netWholeD.parameters()) + list(netSliceD.parameters())
     optimCD = torch.optim.Adam(d_params, lr=lr, betas=(0.5, 0.999))
 
-    ## 그밖에 부수적인 functions 설정하기
+    ## Set additional auxiliary functions
     fn_tonumpy = lambda x: x.to(
         'cpu').detach().numpy().transpose(0, 1, 3, 4, 2)
     fn_tonumpy_4 = lambda x: x.to('cpu').detach().numpy().transpose(0, 2, 3, 1)
@@ -133,11 +133,11 @@ def train(args):
 
     cmap = None
 
-    ## Tensorboard 를 사용하기 위한 SummaryWriter 설정
+    ## Configure SummaryWriter for Tensorboard
     writer_train = SummaryWriter(log_dir=os.path.join(log_dir, 'train'))
     writer_val = SummaryWriter(log_dir=os.path.join(log_dir, 'val'))
 
-    ## 네트워크 학습시키기
+    ## Train network
     st_epoch = 0
     FG = sum(np.prod(list(p.size())) for p in netFaceG.parameters())
     CG = sum(np.prod(list(p.size())) for p in netCubeG.parameters())
@@ -325,7 +325,7 @@ def train(args):
                 #lr_scheduler_FD.step()  
                 #lr_scheduler_FG.step()         
               
-                # 손실함수 계산
+                # Compute loss
                 loss_FG_train += [loss_FG.item()]
                 loss_CG_train += [loss_CG.item()]
                 loss_FD_train += [loss_FD.item()]
@@ -338,7 +338,7 @@ def train(args):
                        np.mean(loss_FD_train), np.mean(loss_CD_train)))
 
                 if batch % 30 == 0:
-                    # Tensorboard 저장하기
+                    # Log to Tensorboard
                     id = num_batch_train * (epoch - 1) + batch
 
                     # 4 face ori
@@ -487,7 +487,7 @@ def train(args):
                     loss_FG_gan = fn_gan(pred_face_fake, torch.ones_like(pred_face_fake))
                     loss_FG = loss_FG_gan*0.001 + loss_l1 * 10+loss_ae
 
-                    # 손실함수 계산
+                    # Compute loss
                     loss_FG_val += [loss_FG.item()]
                     loss_CG_val += [loss_CG.item()]
 
@@ -497,7 +497,7 @@ def train(args):
                            np.mean(loss_FG_val), np.mean(loss_CG_val)))
 
                     if batch % 20 == 0:
-                        # Tensorboard 저장하기
+                        # Log to Tensorboard
                         id = num_batch_val * (epoch - 1) + batch
 
                         # 4 face with mask
@@ -543,7 +543,7 @@ def train(args):
 
 def test(args):
     torch.manual_seed(2020)
-    ## test 파라메터 설정하기
+    ## Set test parameters
     mode = args.mode
     data_parallel = args.data_parallel
 
@@ -585,7 +585,7 @@ def test(args):
 
     print("device: %s" % gpu)
 
-    ## 디렉토리 생성하기
+    ## Create directories
     result_dir_ori = os.path.join(result_dir, 'ori')
     result_dir_gen = os.path.join(result_dir, 'gen')
 
@@ -594,18 +594,18 @@ def test(args):
     if not os.path.exists(result_dir_gen):
         os.makedirs(result_dir_gen)
 
-    ## 네트워크 학습하기
+    ## Prepare for network testing
     if mode == "test":
         transform_test = transforms.Compose([Normalize(), ToTensor()])
 
         dataset_test = PanoramaDataset(in_dir=os.path.join(data_dir, 'test'), transform=transform_test)
         loader_test = DataLoader(dataset_test, batch_size=1, shuffle=False, num_workers=1)
 
-        # 그밖에 부수적인 variables 설정하기
+        # Set additional auxiliary variables
         num_data_test = len(dataset_test)
         num_batch_test = np.ceil(num_data_test / 1)
 
-    ## 네트워크 생성하기
+    ## Create network
     if network == "PIUnet":
         netFaceG = FaceGenerator(
             in_channels=4, out_channels=3, nker=nker, norm=norm, relu=True)
@@ -628,18 +628,18 @@ def test(args):
         netWholeD = netWholeD.to(gpu)
         netSliceD = netSliceD.to(gpu)
 
-    ## 손실함수 정의하기
+    ## Define loss functions
     fn_l1 = nn.L1Loss().to(gpu)
     fn_gan = nn.BCELoss().to(gpu)
 
-    ## Optimizer 설정하기
+    ## Set up optimizers
     optimFG = torch.optim.Adam(netFaceG.parameters(), lr=lr, betas=(0.5, 0.999))
     optimCG = torch.optim.Adam(netCubeG.parameters(), lr=lr, betas=(0.5, 0.999))
     optimFD = torch.optim.Adam(netFaceD.parameters(), lr=lr, betas=(0.5, 0.999))
     d_params = list(netWholeD.parameters()) + list(netSliceD.parameters())
     optimCD = torch.optim.Adam(d_params, lr=lr, betas=(0.5, 0.999))
 
-    ## 그밖에 부수적인 functions 설정하기
+    ## Set additional auxiliary functions
     fn_tonumpy = lambda x: x.to(
         'cpu').detach().numpy().transpose(0, 1, 3, 4, 2)
     fn_tonumpy_4 = lambda x: x.to('cpu').detach().numpy().transpose(0, 2, 3, 1)
@@ -750,7 +750,7 @@ def test(args):
                 loss_FG_gan = fn_gan(pred_face_fake, torch.ones_like(pred_face_fake))
                 loss_FG = loss_FG_gan*0.001 + loss_l1 * 10+loss_ae
 
-                # 손실함수 계산
+                # Compute loss
                 loss_FG_test += [loss_FG.item()]
                 loss_CG_test += [loss_CG.item()]
 
